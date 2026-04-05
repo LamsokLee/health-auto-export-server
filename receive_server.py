@@ -27,25 +27,6 @@ SAVE_DIR.mkdir(parents=True, exist_ok=True)
 PORT = int(os.environ.get("PORT", "3000"))
 
 
-def _write_bytes_atomic(path: Path, data: bytes) -> None:
-    """Write via temp file + rename, then touch. Helps some NAS sync daemons that watch mtime."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.parent / f".{path.name}.{os.getpid()}.tmp"
-    try:
-        with open(tmp, "wb") as f:
-            f.write(data)
-            f.flush()
-            os.fsync(f.fileno())
-        os.replace(tmp, path)
-        path.touch(exist_ok=True)
-    except BaseException:
-        try:
-            tmp.unlink(missing_ok=True)
-        except OSError:
-            pass
-        raise
-
-
 @app.route('/health-data', methods=['POST'])
 def receive_health_data():
     """Receive health data and save to file"""
@@ -72,7 +53,8 @@ def receive_health_data():
             # Save as CSV
             filename = f"{app_name}{timestamp}.csv"
             filepath = SAVE_DIR / filename
-            _write_bytes_atomic(filepath, raw_data)
+            with open(filepath, 'wb') as f:
+                f.write(raw_data)
             
             print(f"[{timestamp}] Saved CSV: {filename} ({len(raw_data)} bytes)")
             return jsonify({'status': 'success', 'filename': filename, 'size': len(raw_data)})
@@ -85,7 +67,8 @@ def receive_health_data():
         # Save as JSON
         filename = f"{app_name}{timestamp}.json"
         filepath = SAVE_DIR / filename
-        _write_bytes_atomic(filepath, raw_data)
+        with open(filepath, 'wb') as f:
+            f.write(raw_data)
         
         print(f"[{timestamp}] Saved JSON: {filename} ({len(raw_data)} bytes)")
         return jsonify({'status': 'success', 'filename': filename, 'size': len(raw_data)})
@@ -95,7 +78,8 @@ def receive_health_data():
     if raw_data:
         filename = f"{app_name}{timestamp}.bin"
         filepath = SAVE_DIR / filename
-        _write_bytes_atomic(filepath, raw_data)
+        with open(filepath, 'wb') as f:
+            f.write(raw_data)
         
         print(f"[{timestamp}] Saved binary: {filename} ({len(raw_data)} bytes)")
         return jsonify({'status': 'success', 'filename': filename, 'size': len(raw_data)})
