@@ -1,0 +1,23 @@
+# Health Auto Export receiver — deploy on NAS / home server
+#
+# Usage:
+#   docker compose up -d --build
+#
+# Point the iOS app at: http://<NAS_LAN_IP>:3000/health-data
+#
+services:
+  health-auto-export:
+    build: .
+    image: health-auto-export-server:local
+    container_name: health-auto-export
+    restart: unless-stopped
+    ports:
+      - "${HOST_PORT:-3000}:3000"
+    environment:
+      HEALTH_DATA_DIR: /data
+      PORT: "3000"
+      GUNICORN_WORKERS: "2"
+      GUNICORN_THREADS: "2"
+    volumes:
+      # Host folder where JSON/CSV land (change left side to your NAS path)
+      - ${HEALTH_EXPORT_DATA:-./health-export-data}:/data

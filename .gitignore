@@ -1,0 +1,9 @@
+__pycache__/
+*.py[cod]
+.Python
+health-export-data/
+.env
+.venv/
+venv/
+*.egg-info/
+.DS_Store
