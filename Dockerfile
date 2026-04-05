@@ -8,8 +8,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     HEALTH_DATA_DIR=/data \
     PORT=3000
 
-COPY requirements-docker.txt .
-RUN pip install --no-cache-dir -r requirements-docker.txt
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY receive_server.py .
 

@@ -2,26 +2,67 @@
 
 Small **Flask** service that accepts Apple Health exports from the [Health Auto Export](https://www.healthyapps.com/health-auto-export/) iOS app (REST API automation) and saves **JSON** or **CSV** to disk.
 
-Use on a Mac, Linux box, or **NAS** (Docker) so your phone can POST to a stable URL on your LAN.
+Designed to run in **Docker** on a NAS or home server so your phone can POST to a stable URL on your LAN.
 
-## Quick start (Python)
-
-```bash
-pip install -r requirements.txt
-export HEALTH_DATA_DIR=/path/to/save/dir   # optional; default: ./health-export-data next to the script
-export PORT=3000                            # optional
-python receive_server.py
-```
-
-Health Auto Export URL: `http://<host-ip>:3000/health-data`
-
-## Docker / NAS
+## Quick start (Docker)
 
 ```bash
 docker compose up -d --build
 ```
 
-See [setup.md](setup.md) for iPhone configuration, firewall notes, and Synology-oriented volume examples.
+Point the app at: `http://<server-lan-ip>:3000/health-data`
+
+Copy [`.env.example`](.env.example) to `.env` and adjust `HEALTH_EXPORT_DATA` (host folder for exports) and `HOST_PORT` if needed.
+
+### Build the image only
+
+```bash
+docker build -t health-auto-export-server:latest .
+```
+
+### Persist data on the host
+
+The compose file mounts `${HEALTH_EXPORT_DATA:-./health-export-data}` → `/data` in the container. Set a NAS path in `.env`, for example:
+
+```bash
+HEALTH_EXPORT_DATA=/volume1/docker/health-auto-export
+```
+
+Inside the container, `HEALTH_DATA_DIR` is `/data` (set in `docker-compose.yml`).
+
+### Firewall and logs
+
+Allow TCP **3000** (or `HOST_PORT`) from your LAN if sync fails.
+
+```bash
+docker compose logs -f health-auto-export
+```
+
+## Optional: run with Python (local dev)
+
+```bash
+pip install -r requirements.txt
+cp .env.example .env   # optional; set HEALTH_DATA_DIR / PORT
+python receive_server.py
+```
+
+Same URL pattern: `http://<host-ip>:3000/health-data`
+
+## iPhone — Health Auto Export
+
+1. Open **Health Auto Export** → **Automations** → **New Automation** → **REST API**.
+
+**URL:** `http://<SERVER_IP>:3000/health-data` (use `HOST_PORT` if you changed it). Timeout ~30s.
+
+**Data type:** Health Metrics — pick the metrics you care about.
+
+**Export:** Format **JSON**, **Version 2**, date range e.g. Yesterday or Since Last Sync, **Summarize Data** on, **Time Grouping** Days, **Batch Requests** off unless you know you need it.
+
+**Schedule:** e.g. daily at a fixed time (background sync may be delayed by iOS).
+
+### Manual test
+
+Use **Manual Export** in the app with a short range (e.g. Yesterday), then check the host folder you mounted for new `.json` / `.csv` files.
 
 ## Endpoints
 
@@ -34,27 +75,28 @@ See [setup.md](setup.md) for iPhone configuration, firewall notes, and Synology-
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `HEALTH_DATA_DIR` | `./health-export-data` (next to `receive_server.py`) | Output directory |
-| `PORT` | `3000` | HTTP port (dev server) |
-| `GUNICORN_WORKERS` | `2` | Docker only |
-| `GUNICORN_THREADS` | `2` | Docker only |
+| `HEALTH_DATA_DIR` | `./health-export-data` next to the script (local only) | Output directory inside the process |
+| `PORT` | `3000` | HTTP port (Gunicorn / dev server) |
+| `HEALTH_EXPORT_DATA` | `./health-export-data` | **Compose:** host path mounted at `/data` |
+| `HOST_PORT` | `3000` | **Compose:** published host port |
+| `GUNICORN_WORKERS` | `2` | **Docker** |
+| `GUNICORN_THREADS` | `2` | **Docker** |
 
-## Create the GitHub repository (one-time)
+## Saved files
 
-From this directory, after [GitHub CLI](https://cli.github.com/) login:
+- `{automation-name}_{timestamp}.json` — JSON
+- `{automation-name}_{timestamp}.csv` — CSV upload  
+  (`automation-name` comes from the `automation-name` header when set.)
 
-```bash
-gh auth login
-gh repo create health-auto-export-server --public --source=. --remote=origin \
-  --description "REST receiver for iOS Health Auto Export (Flask + Docker)" --push
-```
+## Troubleshooting
 
-Without `gh`: create an empty repo at [github.com/new](https://github.com/new), then:
+- **Connection failed:** Server IP, same Wi‑Fi, firewall, correct port.
+- **No data received:** Health permissions in the app, try Manual Export / wider date range, check app activity logs.
+- **Background sync:** iOS may defer work; Low Power Mode and lock state matter. Manual export or iPhone Mirroring on Mac often helps.
 
-```bash
-git remote add origin https://github.com/YOUR_USER/health-auto-export-server.git
-git push -u origin main
-```
+## Downstream
+
+Pair with a **health-data-importer** (or similar) to load saved JSON into DuckDB or another store. Obsidian or note workflows can point at the same export directory.
 
 ## License
 

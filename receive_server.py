@@ -10,9 +10,13 @@ from pathlib import Path
 import json
 import os
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 app = Flask(__name__)
 
-# Configuration — set HEALTH_DATA_DIR for Docker / NAS (see SKILL.md)
+# Configuration — HEALTH_DATA_DIR in .env (see .env.example); Docker sets it in compose
 _save_default = os.environ.get("HEALTH_DATA_DIR")
 if _save_default:
     SAVE_DIR = Path(_save_default).expanduser()
