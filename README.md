@@ -39,6 +39,23 @@ See [setup.md](setup.md) for iPhone configuration, firewall notes, and Synology-
 | `GUNICORN_WORKERS` | `2` | Docker only |
 | `GUNICORN_THREADS` | `2` | Docker only |
 
+## Create the GitHub repository (one-time)
+
+From this directory, after [GitHub CLI](https://cli.github.com/) login:
+
+```bash
+gh auth login
+gh repo create health-auto-export-server --public --source=. --remote=origin \
+  --description "REST receiver for iOS Health Auto Export (Flask + Docker)" --push
+```
+
+Without `gh`: create an empty repo at [github.com/new](https://github.com/new), then:
+
+```bash
+git remote add origin https://github.com/YOUR_USER/health-auto-export-server.git
+git push -u origin main
+```
+
 ## License
 
 Use and modify for personal use; no warranty.
