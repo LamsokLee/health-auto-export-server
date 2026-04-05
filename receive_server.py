@@ -28,7 +28,7 @@ PORT = int(os.environ.get("PORT", "3000"))
 
 
 def _write_bytes_atomic(path: Path, data: bytes) -> None:
-    """Write via temp file + rename. Some NAS sync daemons (e.g. Synology Drive) observe renames reliably."""
+    """Write via temp file + rename, then touch. Helps some NAS sync daemons that watch mtime."""
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.parent / f".{path.name}.{os.getpid()}.tmp"
     try:
@@ -37,6 +37,7 @@ def _write_bytes_atomic(path: Path, data: bytes) -> None:
             f.flush()
             os.fsync(f.fileno())
         os.replace(tmp, path)
+        path.touch(exist_ok=True)
     except BaseException:
         try:
             tmp.unlink(missing_ok=True)
